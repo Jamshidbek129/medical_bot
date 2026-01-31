@@ -1,6 +1,12 @@
 from aiogram import Bot, Dispatcher, executor, types
+import os
 
-API_TOKEN = '8508837142:AAFBr3rxyizkj2J3rU7xPihU32D9n1YGlYw'
+# Tokenni to'g'ridan-to'g'ri yozish o'rniga:
+# TOKEN = "123456:ABCDEF..." <-- BU XAVFLI
+
+# Mana bunday yozing:
+TOKEN = os.getenv("API_TOKEN")
+
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
