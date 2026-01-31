@@ -5,7 +5,7 @@ import os
 # TOKEN = "123456:ABCDEF..." <-- BU XAVFLI
 
 # Mana bunday yozing:
-TOKEN = os.getenv("API_TOKEN")
+API_TOKEN = os.getenv("API_TOKEN")
 
 
 bot = Bot(token=API_TOKEN)
