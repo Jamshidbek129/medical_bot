@@ -5,6 +5,8 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
+from sklearn.preprocessing import StandardScaler
+standart=StandardScaler()
 
 # 1. Sozlamalar
 API_TOKEN = os.getenv("API_TOKEN")
@@ -83,7 +85,7 @@ async def get_age_and_predict(message: types.Message, state: FSMContext):
             float(user_data['dpf']), 
             float(user_data['age'])
         ]])
-
+        input_features=standart.transform(input_features)
         # Bashorat (Outcome)
         prediction = model.predict(input_features)
         
