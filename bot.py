@@ -6,7 +6,7 @@ from aiogram.dispatcher import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from sklearn.preprocessing import StandardScaler
-standart=StandardScaler()
+standart=joblib.load('scaler.pkl')
 
 # 1. Sozlamalar
 API_TOKEN = os.getenv("API_TOKEN")
