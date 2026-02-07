@@ -80,62 +80,116 @@ ADMIN_ID = 5642708836
 
 @dp.message_handler(commands=['stat'])
 async def show_stats(message: types.Message):
-    if message.from_user.id == ADMIN_ID:
-        conn = sqlite3.connect("users.db")
-        cursor = conn.cursor()
+    # O'zingizni ID raqamingizni aniq tekshirish uchun:
+    print(f"Sizning ID: {message.from_user.id}") # Bu Railway Logs-da ko'rinadi
+    
+    if str(message.from_user.id) == str(ADMIN_ID):
+        db_path = "/data/users.db" if os.path.exists("/data") else "users.db"
         
-        # Jami sonini hisoblaymiz
-        cursor.execute("SELECT COUNT(*) FROM users")
-        total_users = cursor.fetchone()[0]
-        
-        # Oxirgi 10 ta foydalanuvchini olamiz
-        cursor.execute("SELECT full_name, username, user_id FROM users ORDER BY joined_date DESC LIMIT 10")
-        rows = cursor.fetchall()
-        conn.close()
+        try:
+            # check_same_thread=False SQLite-dagi ko'p oqimli xatolarni oldini oladi
+            conn = sqlite3.connect(db_path, check_same_thread=False)
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT COUNT(*) FROM users")
+            total_users = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT full_name, username FROM users ORDER BY joined_date DESC LIMIT 10")
+            rows = cursor.fetchall()
+            conn.close()
 
-        res_text = f"📊 **Bot statistikasi:**\nJami foydalanuvchilar: {total_users} ta\n\n"
-        res_text += "👤 **Oxirgi 10 ta foydalanuvchi:**\n"
-        
-        for row in rows:
-            username = f"(@{row[1]})" if row[1] else "(Username yo'q)"
-            res_text += f"• {row[0]} {username} [ID: {row[2]}]\n"
-        
-        await message.answer(res_text, parse_mode="Markdown")
+            res_text = f"📊 Jami foydalanuvchilar: {total_users} ta\n\nOxirgi 10 tasi:\n"
+            for row in rows:
+                username = f"(@{row[1]})" if row[1] else "(Username yo'q)"
+                res_text += f"• {row[0]} {username}\n"
+            
+            await message.answer(res_text)
+            
+        except Exception as e:
+            await message.answer(f"Bazada xatolik: {e}")
     else:
-        await message.answer("Kecherasiz, bu buyruq faqat admin uchun.")
+        # Agar ID mos kelmasa, bot sizga o'z ID-ingizni ko'rsatadi
+        await message.answer(f"Kecherasiz, bu buyruq faqat admin uchun.")
+
 
 
 
 
 @dp.message_handler(commands=['send'])
 async def broadcast_message(message: types.Message):
-    if message.from_user.id == ADMIN_ID:
-        # Buyruqdan keyingi matnni olish (masalan: /send Bugun hamma dam oladi)
+    if str(message.from_user.id) == str(ADMIN_ID):
         text = message.get_args()
         
         if not text:
             await message.answer("Xabar matnini yozing. Masalan: `/send Xabar matni`", parse_mode="Markdown")
             return
 
-        conn = sqlite3.connect("users.db")
-        cursor = conn.cursor()
-        cursor.execute("SELECT user_id FROM users")
-        all_users = cursor.fetchall()
-        conn.close()
+        # Railway Volume yo'lini tekshiramiz
+        db_path = "/data/users.db" if os.path.exists("/data") else "users.db"
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT user_id FROM users")
+            all_users = cursor.fetchall()
+            conn.close()
 
-        success = 0
-        failed = 0
-        
-        for user in all_users:
-            try:
-                await bot.send_message(user[0], text)
-                success += 1
-            except Exception:
-                failed += 1
-        
-        await message.answer(f"✅ Yuborildi: {success} ta\n❌ Yetib bormadi: {failed} ta (botni bloklaganlar)")
+            success = 0
+            failed = 0
+            
+            for user in all_users:
+                try:
+                    await bot.send_message(user[0], text)
+                    success += 1
+                except Exception:
+                    failed += 1
+            
+            await message.answer(f"✅ Yuborildi: {success} ta\n❌ Yetib bormadi: {failed} ta")
+        except Exception as e:
+            await message.answer(f"Xatolik: {e}")
     else:
         await message.answer("Bu buyruq faqat admin uchun!")
+
+
+
+import io
+
+@dp.message_handler(commands=['allusers'])
+async def get_all_users(message: types.Message):
+    if str(message.from_user.id) == str(ADMIN_ID):
+        db_path = "/data/users.db" if os.path.exists("/data") else "users.db"
+        
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            
+            # Hamma foydalanuvchilarni olamiz
+            cursor.execute("SELECT user_id, full_name, username, joined_date FROM users")
+            rows = cursor.fetchall()
+            conn.close()
+
+            if not rows:
+                await message.answer("Bazada foydalanuvchilar yo'q.")
+                return
+
+            # Ma'lumotlarni matn ko'rinishiga keltiramiz
+            report = "ID | ISM | USERNAME | SANA\n"
+            report += "-" * 50 + "\n"
+            for row in rows:
+                report += f"{row[0]} | {row[1]} | @{row[2]} | {row[3]}\n"
+
+            # Matnni faylga aylantiramiz (operativ xotirada)
+            file_buffer = io.BytesIO(report.encode())
+            file_buffer.name = "all_users.txt"
+
+            await message.answer_document(types.InputFile(file_buffer), caption=f"Jami foydalanuvchilar: {len(rows)} ta")
+            
+        except Exception as e:
+            await message.answer(f"Xatolik: {e}")
+    else:
+        await message.answer("Siz admin emassiz!")
+
+
 
 
 @dp.message_handler(commands=['newpatient'])
